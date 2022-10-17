@@ -12,7 +12,7 @@ error Lottery__NeedToSendCorrectAmount();
 
 contract Lottery {
     address private immutable i_owner;
-    uint256 private immutable i_amount;
+    uint256 private immutable i_fee;
     address[] private players;
 
     modifier onlyOwner() {
@@ -22,15 +22,36 @@ contract Lottery {
         _;
     }
 
-    constructor(uint256 _amount) {
+    constructor(uint256 _fee) {
         i_owner = msg.sender;
-        i_amount = _amount;
+        i_fee = _fee;
     }
 
+    /**
+     * @notice
+     * check if amount sent is correct
+     * adds msg.sender to the players array
+     */
     function enterLottery() external payable {
-        if (msg.value != i_amount) {
+        if (msg.value != i_fee) {
             revert Lottery__NeedToSendCorrectAmount();
         }
         players.push(msg.sender);
+    }
+
+    /**
+     * @notice Getter for front end
+     * returns the entrance fee
+     */
+    function getFee() public view returns (uint256) {
+        return i_fee;
+    }
+
+    /**
+     * @notice Getter for front end
+     * returns the players array
+     */
+    function getPlayers() public view returns (address[] memory) {
+        return players;
     }
 }
