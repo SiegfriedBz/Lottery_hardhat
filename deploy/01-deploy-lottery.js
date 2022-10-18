@@ -1,17 +1,5 @@
-const {
-    networkConfig,
-    developmentChains,
-    FEE,
-    INTERVAL,
-    GOERLI_VRF_COORDINATOR_ADDRESS,
-    GOERLI_GASLANE,
-    GOERLI_LINK_SUBSCRIPTION_ID,
-    MUMBAI_VRF_COORDINATOR_ADDRESS,
-    MUMBAI_GASLANE,
-    MUMBAI_LINK_SUBSCRIPTION_ID,
-    CALLBACK_GAS_LIMIT,
-} = require("../hardhat-helper.config")
-const { network } = require("hardhat")
+const { networkConfig, developmentChains } = require("../hardhat-helper.config")
+const { network, ethers } = require("hardhat")
 const { verify } = require("../utils/verify")
 require("dotenv").config()
 
@@ -21,58 +9,66 @@ module.exports = async (hre) => {
     const { deployer } = await getNamedAccounts()
     const chainId = network.config.chainId
 
-    const [
-        VRF_COORDINATOR_ADDRESS,
-        GASLANE,
-        LINK_SUBSCRIPTION_ID,
-        ETHERSCAN_BASE_URL,
-    ] =
-        chainId == 5
-            ? [
-                  GOERLI_VRF_COORDINATOR_ADDRESS,
-                  GOERLI_GASLANE,
-                  GOERLI_LINK_SUBSCRIPTION_ID,
-                  "https://goerli.etherscan.io/address",
-              ]
-            : chainId == 80001
-            ? [
-                  MUMBAI_VRF_COORDINATOR_ADDRESS,
-                  MUMBAI_GASLANE,
-                  MUMBAI_LINK_SUBSCRIPTION_ID,
-                  "https://mumbai.polygonscan.com/address",
-              ]
-            : ["", "", "", ""]
+    /* Constructor args */
+    const entranceFee = networkConfig[chainId].entranceFee
+    const link_GasLane = networkConfig[chainId].link_GasLane
+    const link_CallBack_GasLimit = networkConfig[chainId].link_CallBack_GasLimit
+    const interval = networkConfig[chainId].interval
+    let link_VrfCoordinatorV2_Address
+    let link_SubscriptionId
+    let etherScanBaseUrl
+
+    if (developmentChains.includes(network.name)) {
+        // on local, get VRFCoordinatorV2 Mock
+        const VRFCoordinatorV2Mock = await ethers.getContract(
+            "VRFCoordinatorV2Mock"
+        )
+        link_VrfCoordinatorV2_Address = VRFCoordinatorV2Mock.address
+        const transactionResponse =
+            await VRFCoordinatorV2Mock.createSubscription()
+        const transactionReceipt = await transactionResponse.wait(1)
+        // get link_SubscriptionId from event RandomWordsRequested emitted by VRFCoordinatorV2Mock
+        link_SubscriptionId = transactionReceipt.events[0].args.subId
+        // fund the subscription (done with LINK on real networks)
+        await VRFCoordinatorV2Mock.fundSubscription(
+            link_SubscriptionId,
+            ethers.utils.parseEther("2")
+        )
+    } else {
+        // on testnet
+        link_VrfCoordinatorV2_Address =
+            networkConfig[chainId].link_VrfCoordinatorV2_Address
+        link_SubscriptionId = networkConfig[chainId].link_SubscriptionId // done from chainlink ui
+        etherScanBaseUrl = networkConfig[chainId].etherScanBaseUrl
+    }
+
+    /* Constructor Args */
+    let args = [
+        entranceFee,
+        link_VrfCoordinatorV2_Address,
+        link_GasLane,
+        link_SubscriptionId,
+        link_CallBack_GasLimit,
+        interval,
+    ]
 
     const contract = await deploy("Lottery", {
         contract: "Lottery",
         from: deployer,
-        args: [
-            FEE,
-            VRF_COORDINATOR_ADDRESS,
-            GASLANE,
-            LINK_SUBSCRIPTION_ID,
-            CALLBACK_GAS_LIMIT,
-            INTERVAL,
-        ],
+        args: args,
         log: true,
         waitConfirmations: network.config.blockConfirmations || 1,
     })
 
     if (
+        // if deploy on testnet
         !developmentChains.includes(network.name) &&
         process.env.ETHERSCAN_API_KEY
     ) {
-        // if deploy not on local
-        console.log("Etherscan :", `${ETHERSCAN_BASE_URL}/${contract.address}`)
-        await verify(contract.address, [
-            FEE,
-            VRF_COORDINATOR_ADDRESS,
-            GASLANE,
-            LINK_SUBSCRIPTION_ID,
-            CALLBACK_GAS_LIMIT,
-            INTERVAL,
-        ])
+        console.log("Etherscan :", `${etherScanBaseUrl}/${contract.address}`)
+        await verify(contract.address, args)
     }
+    console.log("-------------------------")
 }
 
 module.exports.tags = ["all", "lottery"]
