@@ -16,11 +16,11 @@ error Lottery__UpKeepNotNeeded(
 // Chainlink VRF v2
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-// Chainlink Keeper (now "Automation")
+// Chainlink Keeper ("Automation")
 import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 
 /** @title A sample Lottery contract
- * @author Siegfried Bozza
+ * @author SiegfriedBz
  * @notice This contract is for creating an untamperable decentralized Lottery smart contract
  * @dev This implements Chainlink VRF v2 and Chainlink Keeper ("Automation")
  * @notice User can enter Lottery by sending ETH
