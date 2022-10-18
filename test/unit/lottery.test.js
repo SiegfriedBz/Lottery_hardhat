@@ -12,7 +12,7 @@ require("hardhat-gas-reporter")
     ? describe.skip
     : describe("Lottery", async function () {
           let deployer, user01
-          let lottery, VRFCoordinatorV2Mock
+          let lottery, VRFCoordinatorV2Mock, entreeFee, interval
           const chainId = network.config.chainId
 
           beforeEach(async function () {
@@ -23,26 +23,63 @@ require("hardhat-gas-reporter")
                   deployer
               )
               lottery = await ethers.getContract("Lottery", deployer)
+              entreeFee = await lottery.getFee()
+              interval = await lottery.getInterval()
           })
 
           describe("constructor", async function () {
               it("initializes the Lottery correctly", async function () {
                   const lotteryState = await lottery.getLotteryState()
                   expect(lotteryState).to.equal(0)
-                  const entreeFee = await lottery.getFee()
                   expect(entreeFee).to.equal(networkConfig[chainId].entranceFee)
-                  const interval = await lottery.getInterval()
                   expect(interval).to.equal(networkConfig[chainId].interval)
               })
           })
 
           describe("enterLottery", async function () {
-              describe("happy path", async function () {})
-              describe("un-happy path", async function () {
-                  it("reverts if the value sent is incorrect", async function () {
-                      let entreeFee = await lottery.getFee()
+              describe("happy path", async function () {
+                  it("adds the correct player in the players array", async function () {
+                      const playersNber_Initial = (await lottery.getPlayers())
+                          .length
+                      await lottery
+                          .connect(user01)
+                          .enterLottery({ value: entreeFee })
+                      const players = await lottery.getPlayers()
+                      const playersNber = players.length
+                      expect(playersNber).to.equal(playersNber_Initial + 1)
+                      expect(players[0]).to.equal(user01.address)
+                  })
+
+                  it("emits an event when a player enters lottery", async function () {
+                      await expect(lottery.enterLottery({ value: entreeFee }))
+                          .to.emit(lottery, "LotteryEntered")
+                          .withArgs(deployer.address)
+                  })
+              })
+              describe("unhappy path", async function () {
+                  it("reverts if the lottery is in 'calculating' state", async function () {
+                      await lottery.enterLottery({ value: entreeFee })
+                      // Time travel
+                      await network.provider.send("evm_increaseTime", [
+                          interval.toNumber() + 1,
+                      ])
+                      await network.provider.send("evm_mine", [])
+                      // We pretend to be a ChainLink Keeper
+                      await lottery.performUpkeep([])
+                      // assert
                       await expect(
-                          lottery.enterLottery({ value: entreeFee.div(2) })
+                          lottery
+                              .connect(user01)
+                              .enterLottery({ value: entreeFee })
+                      ).to.be.revertedWithCustomError(
+                          lottery,
+                          "Lottery__NotOpen"
+                      )
+                  })
+
+                  it("reverts if the value sent is incorrect", async function () {
+                      await expect(
+                          lottery.enterLottery()
                       ).to.be.revertedWithCustomError(
                           lottery,
                           "Lottery__NeedToSendCorrectAmount"
