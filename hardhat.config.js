@@ -10,8 +10,8 @@ const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL || "http://goerli"
 const MUMBAI_RPC_URL = process.env.MUMBAI_RPC_URL || "http://mumbai"
 const PRIV_KEY = process.env.PRIV_KEY || "key"
 const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "key"
+const MARKET_CAP_API_KEY = process.env.COIN_MARKET_CAP_API_KEY || "key"
 
-/** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
     solidity: {
         compilers: [
@@ -58,7 +58,7 @@ module.exports = {
         enabled: false,
         outputFile: "gasReport.txt",
         noColors: true,
-        // currency: "USD",
-        // coinmarketcap: COIN_API_KEY
+        currency: "USD",
+        coinmarketcap: MARKET_CAP_API_KEY,
     },
 }
