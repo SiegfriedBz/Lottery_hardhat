@@ -14,5 +14,7 @@ yarn hardhat compile
 yarn hardhat test
 REPORT_GAS=true yarn hardhat test
 yarn hardhat node
+yarn hardhat deploy
 yarn hardhat deploy --network goerli 
+yarn hardhat deploy --network PolygonMumbai
 ```
