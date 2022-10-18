@@ -6,9 +6,59 @@ require("hardhat-gas-reporter")
 require("hardhat-contract-sizer")
 require("dotenv").config()
 
+const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL || "http://goerli"
+const MUMBAI_RPC_URL = process.env.MUMBAI_RPC_URL || "http://mumbai"
+const PRIV_KEY = process.env.PRIV_KEY || "key"
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "key"
+
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
     solidity: {
-        compilers: [{ version: "0.8.17" }, { version: "0.8.4" }],
+        compilers: [
+            { version: "0.8.0" },
+            { version: "0.8.17" },
+            { version: "0.8.4" },
+        ],
+    },
+    defaultNetwork: "hardhat",
+    networks: {
+        localhost: {
+            chainId: 31337,
+            url: "http://127.0.0.1:8545",
+        },
+        goerli: {
+            chainId: 5,
+            url: GOERLI_RPC_URL,
+            accounts: [PRIV_KEY],
+            blockConfirmations: 6,
+        },
+        PolygonMumbai: {
+            chainId: 80001,
+            url: MUMBAI_RPC_URL,
+            accounts: [PRIV_KEY],
+            blockConfirmations: 6,
+        },
+    },
+    namedAccounts: {
+        deployer: {
+            default: 0,
+            5: 0,
+            80001: 0,
+        },
+        user01: {
+            default: 1,
+            5: 1,
+            80001: 1,
+        },
+    },
+    etherscan: {
+        apiKey: ETHERSCAN_API_KEY,
+    },
+    gasReporter: {
+        enabled: false,
+        outputFile: "gasReport.txt",
+        noColors: true,
+        // currency: "USD",
+        // coinmarketcap: COIN_API_KEY
     },
 }
