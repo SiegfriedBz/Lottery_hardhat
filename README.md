@@ -1,13 +1,18 @@
-# Sample Hardhat Project
-
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+# Lottery Project
+```
+This contract is for creating an untamperable decentralized Lottery smart contract
+```
+```
+This implements Chainlink VRF v2 and Chainlink Keeper ("Automation")
+```
 
 Try running some of the following tasks:
 
 ```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.js
+yarn hardhat help
+yarn hardhat compile
+yarn hardhat test
+REPORT_GAS=true yarn hardhat test
+yarn hardhat node
+yarn hardhat deploy --network goerli 
 ```
