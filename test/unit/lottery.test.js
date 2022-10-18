@@ -7,7 +7,7 @@ const { expect } = require("chai")
 const { solidity } = require("ethereum-waffle")
 require("hardhat-gas-reporter")
 
-// unit tests : to only run on local
+// unit tests : to run only on local
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("Lottery", async function () {
