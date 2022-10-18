@@ -18,11 +18,11 @@ module.exports = async (hre) => {
     let link_SubscriptionId
     let etherScanBaseUrl
 
+    let VRFCoordinatorV2Mock
+
     if (developmentChains.includes(network.name)) {
         // on local, get VRFCoordinatorV2 Mock
-        const VRFCoordinatorV2Mock = await ethers.getContract(
-            "VRFCoordinatorV2Mock"
-        )
+        VRFCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock")
         link_VrfCoordinatorV2_Address = VRFCoordinatorV2Mock.address
         const transactionResponse =
             await VRFCoordinatorV2Mock.createSubscription()
@@ -52,13 +52,21 @@ module.exports = async (hre) => {
         interval,
     ]
 
-    const contract = await deploy("Lottery", {
+    const lottery = await deploy("Lottery", {
         contract: "Lottery",
         from: deployer,
         args: args,
         log: true,
         waitConfirmations: network.config.blockConfirmations || 1,
     })
+
+    if (developmentChains.includes(network.name)) {
+        // on local, add the lottery contract as a consumer of the VRFCoordinatorV2Mock
+        await VRFCoordinatorV2Mock.addConsumer(
+            link_SubscriptionId,
+            lottery.address
+        )
+    }
 
     if (
         // if deploy on testnet
