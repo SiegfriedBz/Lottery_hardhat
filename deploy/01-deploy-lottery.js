@@ -59,6 +59,8 @@ module.exports = async (hre) => {
         log: true,
         waitConfirmations: network.config.blockConfirmations || 1,
     })
+    console.log("Lottery deployed.")
+    console.log("-------------------------")
 
     if (developmentChains.includes(network.name)) {
         // on local, add the lottery contract as a consumer of the VRFCoordinatorV2Mock
@@ -66,6 +68,8 @@ module.exports = async (hre) => {
             link_SubscriptionId,
             lottery.address
         )
+        console.log("Lottery added as a consumer of VRFCoordinatorV2Mock.")
+        console.log("-------------------------")
     }
 
     if (
