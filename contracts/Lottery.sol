@@ -126,10 +126,11 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
                 uint256(s_lotteryState)
             );
         }
+        // update lastTimeStamp
         s_lastTimeStamp = block.timestamp;
-
-        // call on i_vrfCoordinator contract to request the random number
+        // update LotteryState
         s_lotteryState = LotteryState.CALCULATING;
+        // request the random number on i_vrfCoordinator contract
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane,
             i_subscriptionId,
