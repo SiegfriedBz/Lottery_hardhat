@@ -13,7 +13,7 @@ const networkConfig = {
         link_baseFee: ethers.utils.parseEther("0.25"), // same as goerli
         link_gasPriceLink: 10e9, // same as goerli
         link_CallBack_GasLimit: 500000, // same as goerli
-        interval: 30, // same as goerli
+        interval: 60, // same as goerli
     },
     5: {
         name: "goerli",
@@ -26,7 +26,7 @@ const networkConfig = {
         link_baseFee: ethers.utils.parseEther("0.25"), //it costs 0.25LINK per rdom number request// uint96 _baseFee : "Premium" value, network-specific at https://docs.chain.link/docs/vrf/v2/subscription/supported-networks/#goerli-testnet
         link_gasPriceLink: 10e9, // ~ LINK per GAS
         link_CallBack_GasLimit: 500000, // uint32 _callbackGasLimit
-        interval: 30,
+        interval: 60, // 60sec
         etherScanBaseUrl: "https://goerli.etherscan.io/address",
     },
     80001: {
@@ -40,7 +40,7 @@ const networkConfig = {
         link_baseFee: ethers.utils.parseEther("0.0005"),
         link_gasPriceLink: 10e9, // /!\TO CHANGE
         link_CallBack_GasLimit: 500000,
-        interval: 30,
+        interval: 60,
         etherScanBaseUrl: "https://mumbai.polygonscan.com/address",
     },
 }
