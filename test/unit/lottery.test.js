@@ -168,6 +168,38 @@ require("hardhat-gas-reporter")
                       let trx = await lottery.performUpkeep([])
                       expect(trx)
                   })
+
+                  it("updates the lottery state", async function () {
+                      // player enters lottery
+                      await lottery.enterLottery({ value: entranceFee })
+                      // Time Travel and Mine
+                      await network.provider.send("evm_increaseTime", [
+                          interval.toNumber() + 1,
+                      ])
+                      await network.provider.send("evm_mine", [])
+                      // check upkeepNeeded is true
+                      let { upkeepNeeded } =
+                          await lottery.callStatic.checkUpkeep([])
+                      expect(upkeepNeeded)
+                      // call performUpkeep
+                      let transactionResponse = await lottery.performUpkeep([])
+                      let transactionReceipt = await transactionResponse.wait(1)
+                      // assert lottery's latestTimeStamp is updated
+                      let { blockNumber } = transactionReceipt
+                      let expectedTimeStamp = (
+                          await ethers.provider.getBlock(blockNumber)
+                      ).timestamp
+                      let latestTimeStamp = await lottery.getLatestTimeStamp()
+                      expect(latestTimeStamp).to.equal(expectedTimeStamp)
+                      // assert lottery's state is updated to CALCULATING
+                      let lotteryState = await lottery.getLotteryState()
+                      expect(lotteryState).to.equal(1)
+                      // assert the correct event is emitted
+                      expect(transactionResponse).to.emit(
+                          lottery,
+                          "RandomWinnerRequested"
+                      )
+                  })
               })
               describe("unhappy path", function () {
                   it("reverts if upkeepNeeded is false", async function () {
