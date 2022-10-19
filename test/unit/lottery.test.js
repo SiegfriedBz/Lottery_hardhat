@@ -67,6 +67,7 @@ require("hardhat-gas-reporter")
                       // We pretend to be a ChainLink Keeper
                       await lottery.performUpkeep([])
                       // assert
+
                       await expect(
                           lottery
                               .connect(user01)
@@ -85,6 +86,21 @@ require("hardhat-gas-reporter")
                           "Lottery__NeedToSendCorrectAmount"
                       )
                   })
+              })
+          })
+
+          describe("checkupkeep", async function () {
+              it("returns false if no user has sent ETH", async function () {
+                  await network.provider.send("evm_increaseTime", [
+                      interval.toNumber() + 1,
+                  ])
+                  await network.provider.send("evm_mine", [])
+                  // checkUpkeep is "public" without "view" so HH interprets a call to this func as a transaction.
+                  /// here, we don t want create a transaction, we just want to get the value returned by checkUpkeep.
+                  const { upkeepNeeded } = await lottery.callStatic.checkUpkeep(
+                      []
+                  )
+                  expect(upkeepNeeded).to.equal(false)
               })
           })
       })
