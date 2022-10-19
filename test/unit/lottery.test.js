@@ -10,9 +10,11 @@ require("hardhat-gas-reporter")
 // unit tests : to run only on local
 !developmentChains.includes(network.name)
     ? describe.skip
-    : describe("Lottery", async function () {
+    : describe("Lottery", function () {
           let deployer, user01
-          let lottery, VRFCoordinatorV2Mock, entreeFee, interval
+          let lottery
+          let VRFCoordinatorV2Mock
+          let entranceFee, interval
           const chainId = network.config.chainId
 
           beforeEach(async function () {
@@ -23,27 +25,29 @@ require("hardhat-gas-reporter")
                   deployer
               )
               lottery = await ethers.getContract("Lottery", deployer)
-              entreeFee = await lottery.getFee()
+              entranceFee = await lottery.getFee()
               interval = await lottery.getInterval()
           })
 
-          describe("constructor", async function () {
+          describe("constructor", function () {
               it("initializes the Lottery correctly", async function () {
                   const lotteryState = await lottery.getLotteryState()
                   expect(lotteryState).to.equal(0)
-                  expect(entreeFee).to.equal(networkConfig[chainId].entranceFee)
+                  expect(entranceFee).to.equal(
+                      networkConfig[chainId].entranceFee
+                  )
                   expect(interval).to.equal(networkConfig[chainId].interval)
               })
           })
 
-          describe("enterLottery", async function () {
-              describe("happy path", async function () {
+          describe("enterLottery", function () {
+              describe("happy path", function () {
                   it("adds the correct player in the players array", async function () {
                       const playersNber_Initial = (await lottery.getPlayers())
                           .length
                       await lottery
                           .connect(user01)
-                          .enterLottery({ value: entreeFee })
+                          .enterLottery({ value: entranceFee })
                       const players = await lottery.getPlayers()
                       const playersNber = players.length
                       expect(playersNber).to.equal(playersNber_Initial + 1)
@@ -51,15 +55,16 @@ require("hardhat-gas-reporter")
                   })
 
                   it("emits an event when a player enters lottery", async function () {
-                      await expect(lottery.enterLottery({ value: entreeFee }))
+                      await expect(lottery.enterLottery({ value: entranceFee }))
                           .to.emit(lottery, "LotteryEntered")
                           .withArgs(deployer.address)
                   })
               })
-              describe("unhappy path", async function () {
-                  it("reverts if the lottery is in 'calculating' state", async function () {
-                      await lottery.enterLottery({ value: entreeFee })
-                      // Time travel
+
+              describe("unhappy path", function () {
+                  it("reverts if the lottery is not opened", async function () {
+                      await lottery.enterLottery({ value: entranceFee })
+                      // Time Travel + Mine
                       await network.provider.send("evm_increaseTime", [
                           interval.toNumber() + 1,
                       ])
@@ -71,7 +76,7 @@ require("hardhat-gas-reporter")
                       await expect(
                           lottery
                               .connect(user01)
-                              .enterLottery({ value: entreeFee })
+                              .enterLottery({ value: entranceFee })
                       ).to.be.revertedWithCustomError(
                           lottery,
                           "Lottery__NotOpen"
@@ -89,8 +94,9 @@ require("hardhat-gas-reporter")
               })
           })
 
-          describe("checkupkeep", async function () {
+          describe("checkUpkeep", function () {
               it("returns false if no user has sent ETH", async function () {
+                  // Time Travel + Mine
                   await network.provider.send("evm_increaseTime", [
                       interval.toNumber() + 1,
                   ])
@@ -100,7 +106,81 @@ require("hardhat-gas-reporter")
                   const { upkeepNeeded } = await lottery.callStatic.checkUpkeep(
                       []
                   )
-                  expect(upkeepNeeded).to.equal(false)
+                  // assert
+                  expect(!upkeepNeeded)
+              })
+
+              it("returns false if lottery is not opened", async function () {
+                  await lottery.enterLottery({ value: entranceFee })
+                  // Time Travel + Mine
+                  await network.provider.send("evm_increaseTime", [
+                      interval.toNumber() + 1,
+                  ])
+                  await network.provider.send("evm_mine", [])
+                  // performUpkeep to update lottery state
+                  await lottery.performUpkeep([])
+                  let lotteryState = await lottery.getLotteryState()
+                  // checkUpkeep callStatic
+                  const { upkeepNeeded } = await lottery.callStatic.checkUpkeep(
+                      []
+                  )
+                  // assert
+                  expect(lotteryState).to.equal(1) // not open
+                  expect(!upkeepNeeded)
+              })
+
+              it("returns false if enough time hasn't passed", async () => {
+                  await lottery.enterLottery({ value: entranceFee })
+                  await network.provider.send("evm_increaseTime", [
+                      interval.toNumber() - 50,
+                  ]) // use a higher number here if this test fails
+                  await network.provider.send("evm_mine", [])
+                  const { upkeepNeeded } = await lottery.callStatic.checkUpkeep(
+                      "0x"
+                  ) // upkeepNeeded = (isOpen && timePassed && hasPlayer && isFunded)
+                  expect(!upkeepNeeded)
+              })
+
+              it("returns true if enough time has passed, has players, eth, and is open", async () => {
+                  await lottery.enterLottery({ value: entranceFee })
+                  await network.provider.send("evm_increaseTime", [
+                      interval.toNumber() + 1,
+                  ])
+                  await network.provider.send("evm_mine", [])
+                  const { upkeepNeeded } = await lottery.callStatic.checkUpkeep(
+                      "0x"
+                  ) // upkeepNeeded = (isOpen && timePassed && hasPlayer && isFunded)
+                  expect(upkeepNeeded)
+              })
+          })
+
+          describe("performUpkeep", function () {
+              describe("happy path", function () {
+                  it("can only be run if upkeepNeeded is true", async function () {
+                      await lottery.enterLottery({ value: entranceFee })
+                      await network.provider.send("evm_increaseTime", [
+                          interval.toNumber() + 1,
+                      ])
+                      await network.provider.send("evm_mine", [])
+                      let { upkeepNeeded } =
+                          await lottery.callStatic.checkUpkeep([])
+                      expect(upkeepNeeded)
+                      let trx = await lottery.performUpkeep([])
+                      expect(trx)
+                  })
+              })
+              describe("unhappy path", function () {
+                  it("reverts if upkeepNeeded is false", async function () {
+                      let { upkeepNeeded } =
+                          await lottery.callStatic.checkUpkeep([])
+                      expect(!upkeepNeeded)
+                      await expect(
+                          lottery.performUpkeep([])
+                      ).to.be.revertedWithCustomError(
+                          lottery,
+                          "Lottery__UpKeepNotNeeded"
+                      )
+                  })
               })
           })
       })
