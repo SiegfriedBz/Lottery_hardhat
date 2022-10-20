@@ -16,8 +16,8 @@ error Lottery__UpKeepNotNeeded(
 // Chainlink VRF v2
 import "@chainlink/contracts/src/v0.8/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
-// Chainlink Keeper ("Automation")
-import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
+// Chainlink Keeper
+import "@chainlink/contracts/src/v0.8/interfaces/KeeperCompatibleInterface.sol";
 
 /** @title A sample Lottery contract
  * @author SiegfriedBz
@@ -28,7 +28,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.s
  * @notice Chainlink Keeper will call the function to pick a winner
  */
 
-contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
+contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
     /* Type Declaration */
     enum LotteryState {
         OPEN,
@@ -50,12 +50,18 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     address payable private s_newWinner;
     LotteryState private s_lotteryState;
     uint256 private immutable i_interval; // KEEPER
+    uint256 private immutable i_endDate;
     uint256 private s_lastTimeStamp;
+    uint256 private s_newPrize;
 
     /* Events */
-    event LotteryEntered(address indexed _player);
-    event RandomWinnerRequested(uint256 indexed _requestId);
-    event WinnerPicked(address indexed s_newWinner);
+    event LotteryEntered(address indexed player);
+    event RandomWinnerRequested(uint256 indexed requestId);
+    event WinnerPicked(
+        address indexed s_newWinner,
+        uint256 indexed s_newPrize,
+        uint256 indexed winDate
+    );
 
     modifier onlyOwner() {
         if (i_owner != msg.sender) {
@@ -71,7 +77,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         uint64 _subscriptionId,
         uint32 _callbackGasLimit,
         uint256 _interval
-    ) VRFConsumerBaseV2(_vrfCoordinator) AutomationCompatibleInterface() {
+    ) VRFConsumerBaseV2(_vrfCoordinator) {
         i_owner = msg.sender;
         i_fee = _fee;
         i_vrfCoordinator = VRFCoordinatorV2Interface(_vrfCoordinator);
@@ -80,6 +86,7 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         i_callbackGasLimit = _callbackGasLimit;
         s_lotteryState = LotteryState.OPEN;
         i_interval = _interval;
+        i_endDate = block.timestamp + _interval;
         s_lastTimeStamp = block.timestamp;
     }
 
@@ -142,7 +149,6 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     }
 
     function fulfillRandomWords(
-        // override VRFConsumerBaseV2.sol
         uint256, /* requestId */
         uint256[] memory randomWords
     ) internal override {
@@ -151,11 +157,12 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
         s_newWinner = newWinner;
         s_players = new address payable[](0);
         s_lotteryState = LotteryState.OPEN;
-        (bool success, ) = s_newWinner.call{value: address(this).balance}("");
+        s_newPrize = address(this).balance;
+        (bool success, ) = s_newWinner.call{value: s_newPrize}("");
         if (!success) {
             revert Lottery__TransferFailed();
         }
-        emit WinnerPicked(s_newWinner);
+        emit WinnerPicked(s_newWinner, s_newPrize, block.timestamp);
     }
 
     /**
@@ -200,6 +207,20 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     /**
      * @notice Getter for front end
      */
+    function getNewWinnerPrize() public view returns (uint256) {
+        return s_newPrize;
+    }
+
+    /**
+     * @notice Getter for front end
+     */
+    function getLatestTimeStamp() public view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    /**
+     * @notice Getter for front end
+     */
     function getLotteryState() public view returns (uint256) {
         return uint256(s_lotteryState);
     }
@@ -214,8 +235,8 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     /**
      * @notice Getter for front end
      */
-    function getLatestTimeStamp() public view returns (uint256) {
-        return s_lastTimeStamp;
+    function getEndDate() public view returns (uint256) {
+        return i_endDate;
     }
 
     /**
