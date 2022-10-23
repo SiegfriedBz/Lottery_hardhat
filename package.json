@@ -1,8 +1,6 @@
 {
   "scripts": {
-    "compile": "yarn hardhat compile",
-    "clean": "yarn hardhat clean",
-    "deploy:goerli": "yarn hardhat deploy --network goerli"
+
   },
   "devDependencies": {
     "@chainlink/contracts": "^0.5.1",
