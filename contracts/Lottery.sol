@@ -148,11 +148,16 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         emit RandomWinnerRequested(requestId);
     }
 
+    /**
+     * @dev function called by the ChainLink nodes
+     * After the request for randomness is made, a Chainlink Node calls its own fulfillRandomWords to run off-chain calculation => randomWords.
+     * Then, a Chainlink Node calls our fulfillRandomWords (on-chain) and pass to it the requestId and the randomWords.
+     */
     function fulfillRandomWords(
         uint256, /* requestId */
         uint256[] memory randomWords
     ) internal override {
-        uint256 indexOfWinner = randomWords[0] % s_players.length; // randomWords[0] : we expect only 1 word (NUMWORDS = 1;) and we want a random number that belongs to [0, players.length]
+        uint256 indexOfWinner = randomWords[0] % s_players.length; // randomWords[0] : we expect only 1 "random word" (having passed NUMWORDS = 1;) and we want a "random word" belonging to [0, players.length]
         address payable newWinner = s_players[indexOfWinner];
         s_newWinner = newWinner;
         s_players = new address payable[](0);
@@ -225,6 +230,7 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         return uint256(s_lotteryState);
     }
 
+    /**
     /**
      * @notice Getter for front end
      */
