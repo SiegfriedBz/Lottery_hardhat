@@ -11,10 +11,8 @@ require("hardhat-gas-reporter")
 !developmentChains.includes(network.name)
   ? describe.skip
   : describe("Lottery", function () {
-      let accounts, deployer, user01
-      let lottery
-      let VRFCoordinatorV2Mock
-      let entranceFee, interval
+      let accounts, deployer, user01, entranceFee, interval
+      let lottery, VRFCoordinatorV2Mock
       const chainId = network.config.chainId
 
       beforeEach(async function () {
@@ -252,8 +250,8 @@ require("hardhat-gas-reporter")
           expect(players.length).to.equal(4)
 
           //
-          const StartingTimeStamp = await lottery.getLatestTimeStamp()
-          console.log(new Date(StartingTimeStamp * 1000).toLocaleString())
+          const startingTimeStamp = await lottery.getLatestTimeStamp()
+          console.log(new Date(startingTimeStamp * 1000).toLocaleString())
           // performUpkeep (mock being ChainLink Keepers)
           // fulfillRandomWords (mock being ChainLink VRF)
           // we will have to wait for the fulfillRandomWords to be called
@@ -285,7 +283,7 @@ require("hardhat-gas-reporter")
                 )
                 expect(contractBalance.toString()).to.equal("0")
                 expect(prize).to.equal(entranceFee.mul(players.length))
-                expect(endingTimeStamp).to.be > StartingTimeStamp
+                expect(endingTimeStamp).to.be > startingTimeStamp
                 expect(lotteryState.toString()).to.equal("0")
                 expect(newPlayers.length.toString()).to.equal("0")
               } catch (error) {
@@ -294,8 +292,6 @@ require("hardhat-gas-reporter")
               }
               resolve()
             })
-
-            // set up listener
 
             // fire the event, listener will pick it up and resolve
             /// performUpkeep (mock being ChainLink Keepers calling our performUpkeep). Note : players added, funds added, time
