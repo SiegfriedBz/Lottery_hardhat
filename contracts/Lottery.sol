@@ -119,7 +119,8 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
 
     /**
      * @dev function called by the ChainLink Keeper ("Automation") nodes
-     * when checkUpkeep() return true
+     * when checkUpkeep() return true.
+     * If upkeepNeeded is true, a request for randomness is made.
      */
     function performUpkeep(
         bytes memory /* performData */
@@ -133,8 +134,6 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
                 uint256(s_lotteryState)
             );
         }
-        // update lastTimeStamp
-        s_lastTimeStamp = block.timestamp;
         // update LotteryState
         s_lotteryState = LotteryState.CALCULATING;
         // request the random number on i_vrfCoordinator contract
@@ -163,6 +162,7 @@ contract Lottery is VRFConsumerBaseV2, KeeperCompatibleInterface {
         s_players = new address payable[](0);
         s_lotteryState = LotteryState.OPEN;
         s_newPrize = address(this).balance;
+        s_lastTimeStamp = block.timestamp;
         (bool success, ) = s_newWinner.call{value: s_newPrize}("");
         if (!success) {
             revert Lottery__TransferFailed();
