@@ -180,7 +180,7 @@ require("hardhat-gas-reporter")
 
           describe("performUpkeep", function () {
               describe("happy path", function () {
-                  it("can only be run if upkeepNeeded is true", async function () {
+                  it("can only run if upkeepNeeded is TRUE", async function () {
                       await lottery.enterLottery({ value: entranceFee })
                       await network.provider.send("evm_increaseTime", [
                           interval.toNumber() + 1,
@@ -217,12 +217,18 @@ require("hardhat-gas-reporter")
                       expect(latestTimeStamp).to.equal(expectedTimeStamp)
                       // assert lottery's state is updated to CALCULATING
                       let lotteryState = await lottery.getLotteryState()
-                      expect(lotteryState).to.equal(1)
-                      // assert the correct event is emitted
+                      expect(lotteryState.toString()).to.equal("1")
+                      // assert our event is emitted
                       expect(transactionResponse).to.emit(
                           lottery,
                           "RandomWinnerRequested"
                       )
+                      // assert i_vrfCoordinator.requestRandomWords returns a requestId, that we passed to our event
+                      /// note: we check events[1] bcz VRFCoordinator already emitted an event (RandomWordsRequested) (events[0]) by calling requestRandomWords(//)
+                      let requestId =
+                          transactionReceipt.events[1].args.requestId
+                      console.log("requestId", requestId)
+                      expect(requestId.toNumber() > 0)
                   })
               })
               describe("unhappy path", function () {
@@ -251,6 +257,7 @@ require("hardhat-gas-reporter")
               })
 
               it("reverts if performUpkeep was not called before", async function () {
+                  // after request for randomness is made, ChainLink nodes run off-chain their own fulfillRandomWords, and if a request was actually made it ends up by the ChainLink nodes calling our fulfillRandomWords, on-chain
                   await expect(
                       VRFCoordinatorV2Mock.fulfillRandomWords(
                           0,
@@ -265,6 +272,6 @@ require("hardhat-gas-reporter")
                   ).to.be.revertedWith("nonexistent request")
               })
 
-              it("", async function () {})
+              it("sets the winner, updates the lottery state, and sends value to winner", async function () {})
           })
       })
