@@ -86,4 +86,7 @@ module.exports = {
         currency: "USD",
         coinmarketcap: MARKET_CAP_API_KEY,
     },
+    mocha: {
+        timeout: 300000, // timeout for test. if running staging tests (test net), might need to be increased.
+    },
 }
