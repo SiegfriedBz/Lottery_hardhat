@@ -18,7 +18,7 @@ create .env file and fill values, using .env.example keys
 PRIV_KEY= // your wallet private key
 GOERLI_RPC_URL= // https://www.alchemy.com/
 MUMBAI_RPC_URL=
-GOERLI_LINK_SUBSCRIPTION_ID= // https://docs.chain.link/docs/vrf/v2/subscription/ui/
+GOERLI_LINK_SUBSCRIPTION_ID= //https://vrf.chain.link/goerli
 MUMBAI_LINK_SUBSCRIPTION_ID=
 GOERLI_ETHERSCAN_API_KEY= // https://etherscan.io/apis
 MUMBAI_ETHERSCAN_API_KEY=
