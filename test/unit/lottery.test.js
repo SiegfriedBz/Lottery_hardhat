@@ -7,7 +7,7 @@ const { expect } = require("chai")
 const { solidity } = require("ethereum-waffle")
 require("hardhat-gas-reporter")
 
-// unit tests : to run only on local
+// unit tests : only on local
 !developmentChains.includes(network.name)
     ? describe.skip
     : describe("Lottery", function () {
@@ -32,17 +32,19 @@ require("hardhat-gas-reporter")
           describe("constructor", function () {
               it("initializes the Lottery correctly", async function () {
                   const lotteryState = await lottery.getLotteryState()
-                  expect(lotteryState).to.equal(0)
+                  expect(lotteryState.toString()).to.equal("0")
                   expect(entranceFee).to.equal(
                       networkConfig[chainId].entranceFee
                   )
-                  expect(interval).to.equal(networkConfig[chainId].interval)
+                  expect(interval.toString()).to.equal(
+                      networkConfig[chainId].interval.toString()
+                  )
               })
           })
 
           describe("enterLottery", function () {
               describe("happy path", function () {
-                  it("adds the correct player in the players array", async function () {
+                  it("adds the correct player in the players array and adds the correct value to the contract", async function () {
                       const playersNber_Initial = (await lottery.getPlayers())
                           .length
                       await lottery
@@ -50,8 +52,12 @@ require("hardhat-gas-reporter")
                           .enterLottery({ value: entranceFee })
                       const players = await lottery.getPlayers()
                       const playersNber = players.length
+                      const lottery_Balance = await ethers.provider.getBalance(
+                          lottery.address
+                      )
                       expect(playersNber).to.equal(playersNber_Initial + 1)
                       expect(players[0]).to.equal(user01.address)
+                      expect(lottery_Balance).to.equal(entranceFee)
                   })
 
                   it("emits an event when a player enters lottery", async function () {
@@ -69,10 +75,15 @@ require("hardhat-gas-reporter")
                           interval.toNumber() + 1,
                       ])
                       await network.provider.send("evm_mine", [])
-                      // We pretend to be a ChainLink Keeper
+                      // check Lottery state is OPEN
+                      let lotteryState = await lottery.getLotteryState()
+                      expect(lotteryState.toString()).to.equal("0")
+                      // We pretend to be a ChainLink Keeper calling Lottery contract
                       await lottery.performUpkeep([])
+                      // check Lottery state is CALCULATING
+                      lotteryState = await lottery.getLotteryState()
+                      expect(lotteryState.toString()).to.equal("1")
                       // assert
-
                       await expect(
                           lottery
                               .connect(user01)
@@ -117,39 +128,52 @@ require("hardhat-gas-reporter")
                       interval.toNumber() + 1,
                   ])
                   await network.provider.send("evm_mine", [])
-                  // performUpkeep to update lottery state
+                  // performUpkeep to update lottery state to CALCULATING
                   await lottery.performUpkeep([])
                   let lotteryState = await lottery.getLotteryState()
+                  expect(lotteryState.toString()).to.equal("1") // CALCULATING
                   // checkUpkeep callStatic
                   const { upkeepNeeded } = await lottery.callStatic.checkUpkeep(
                       []
                   )
                   // assert
-                  expect(lotteryState).to.equal(1) // not open
                   expect(!upkeepNeeded)
               })
 
-              it("returns false if enough time hasn't passed", async () => {
+              it("returns false if enough time has not passed", async () => {
                   await lottery.enterLottery({ value: entranceFee })
                   await network.provider.send("evm_increaseTime", [
-                      interval.toNumber() - 50,
-                  ]) // use a higher number here if this test fails
+                      interval.toNumber() - 25,
+                  ])
                   await network.provider.send("evm_mine", [])
                   const { upkeepNeeded } = await lottery.callStatic.checkUpkeep(
-                      "0x"
+                      []
                   ) // upkeepNeeded = (isOpen && timePassed && hasPlayer && isFunded)
                   expect(!upkeepNeeded)
               })
 
-              it("returns true if enough time has passed, has players, eth, and is open", async () => {
+              it("returns TRUE if has players, eth, enough time has passed, and is open", async () => {
+                  let players_Initial = await lottery.getPlayers()
+                  let players_InitialNber = players_Initial.length
                   await lottery.enterLottery({ value: entranceFee })
                   await network.provider.send("evm_increaseTime", [
                       interval.toNumber() + 1,
                   ])
                   await network.provider.send("evm_mine", [])
                   const { upkeepNeeded } = await lottery.callStatic.checkUpkeep(
-                      "0x"
-                  ) // upkeepNeeded = (isOpen && timePassed && hasPlayer && isFunded)
+                      []
+                  )
+                  // checks
+                  let players = await lottery.getPlayers()
+                  let playersNber = players.length
+                  expect(playersNber).to.equal(players_InitialNber + 1)
+                  const lottery_Balance = await ethers.provider.getBalance(
+                      lottery.address
+                  )
+                  expect(lottery_Balance).to.equal(entranceFee)
+                  let lotteryState = await lottery.getLotteryState()
+                  expect(lotteryState.toString()).to.equal("0") // OPEN
+                  // upkeepNeeded = (isOpen && timePassed && hasPlayer && isFunded)
                   expect(upkeepNeeded)
               })
           })
@@ -214,5 +238,33 @@ require("hardhat-gas-reporter")
                       )
                   })
               })
+          })
+
+          describe("fulfillRandomWords", function () {
+              beforeEach(async function () {
+                  // player enters lottery, Time Travel and Mine
+                  await lottery.enterLottery({ value: entranceFee })
+                  await network.provider.send("evm_increaseTime", [
+                      interval.toNumber() + 1,
+                  ])
+                  await network.provider.send("evm_mine", [])
+              })
+
+              it("reverts if performUpkeep was not called before", async function () {
+                  await expect(
+                      VRFCoordinatorV2Mock.fulfillRandomWords(
+                          0,
+                          lottery.address
+                      )
+                  ).to.be.revertedWith("nonexistent request")
+                  await expect(
+                      VRFCoordinatorV2Mock.fulfillRandomWords(
+                          1,
+                          lottery.address
+                      )
+                  ).to.be.revertedWith("nonexistent request")
+              })
+
+              it("", async function () {})
           })
       })

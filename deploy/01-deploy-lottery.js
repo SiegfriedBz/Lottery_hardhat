@@ -75,10 +75,11 @@ module.exports = async (hre) => {
     if (
         // if deploy on testnet
         !developmentChains.includes(network.name) &&
-        process.env.ETHERSCAN_API_KEY
+        (process.env.GOERLI_ETHERSCAN_API_KEY ||
+            process.env.MUMBAI_ETHERSCAN_API_KEY)
     ) {
-        console.log("Etherscan :", `${etherScanBaseUrl}/${contract.address}`)
-        await verify(contract.address, args)
+        console.log("Etherscan :", `${etherScanBaseUrl}/${lottery.address}`)
+        await verify(lottery.address, args)
     }
     console.log("-------------------------")
 }

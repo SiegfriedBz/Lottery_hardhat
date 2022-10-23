@@ -12,7 +12,8 @@ require("dotenv").config()
 const GOERLI_RPC_URL = process.env.GOERLI_RPC_URL || "http://goerli"
 const MUMBAI_RPC_URL = process.env.MUMBAI_RPC_URL || "http://mumbai"
 const PRIV_KEY = process.env.PRIV_KEY || "key"
-const ETHERSCAN_API_KEY = process.env.ETHERSCAN_API_KEY || "key"
+const GOERLI_ETHERSCAN_API_KEY = process.env.GOERLI_ETHERSCAN_API_KEY || "key"
+const MUMBAI_ETHERSCAN_API_KEY = process.env.MUMBAI_ETHERSCAN_API_KEY || "key"
 const MARKET_CAP_API_KEY = process.env.COIN_MARKET_CAP_API_KEY || "key"
 
 module.exports = {
@@ -35,7 +36,7 @@ module.exports = {
             accounts: [PRIV_KEY],
             blockConfirmations: 6,
         },
-        PolygonMumbai: {
+        polygonMumbai: {
             chainId: 80001,
             url: MUMBAI_RPC_URL,
             accounts: [PRIV_KEY],
@@ -55,7 +56,28 @@ module.exports = {
         },
     },
     etherscan: {
-        apiKey: ETHERSCAN_API_KEY,
+        apiKey: {
+            goerli: GOERLI_ETHERSCAN_API_KEY,
+            polygonMumbai: MUMBAI_ETHERSCAN_API_KEY,
+        },
+        customChains: [
+            {
+                network: "goerli",
+                chainId: 4,
+                urls: {
+                    apiURL: "https://api-rinkeby.etherscan.io/api",
+                    browserURL: "https://rinkeby.etherscan.io",
+                },
+            },
+            {
+                network: "polygonMumbai",
+                chainId: 80001,
+                urls: {
+                    apiURL: "https://api-testnet.polygonscan.com",
+                    browserURL: "https://mumbai.polygonscan.com/",
+                },
+            },
+        ],
     },
     gasReporter: {
         enabled: false,
